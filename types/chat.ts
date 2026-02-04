@@ -1,7 +1,9 @@
 export type Role = "user" | "assistant";
 
-export interface Message {
+export type Message = {
   id: string;
   role: Role;
   content: string;
-}
+  sources?: any[];
+  streaming?: boolean;
+};

@@ -12,6 +12,9 @@ export default function MessageBubble({ message }: { message: Message }) {
       }`}
     >
       {message.content}
+      {message.streaming && (
+        <span className="ml-1 animate-pulse">▍</span>
+      )}
     </div>
   );
 }
