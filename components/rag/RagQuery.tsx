@@ -43,13 +43,13 @@ export default function RagQuery() {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="flex-1 border border-zinc-300 rounded-lg p-3 text-base focus:ring-2 focus:ring-zinc-800 focus:outline-none"
+          className="flex-1 border border-zinc-300 rounded-lg p-3 text-base focus:ring-2 focus:ring-zinc-800 focus:outline-none text-black"
           placeholder="Enter your question here..."
         />
         <button
           onClick={runQuery}
           disabled={loading}
-          className="bg-white text-zinc-900 border border-zinc-300 px-6 py-3 rounded-lg font-semibold hover:bg-zinc-50 hover:border-zinc-400 transition-all shadow-sm"
+          className="bg-white text-black border border-zinc-300 px-6 py-3 rounded-lg font-semibold hover:bg-zinc-50 hover:border-zinc-400 transition-all shadow-sm"
         >
           {loading ? "..." : "Search"}
         </button>
