@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { apiClient } from "@/lib/apiClient";
 
 export default function RagQuery() {
   const [query, setQuery] = useState("");
@@ -15,16 +16,13 @@ export default function RagQuery() {
         const form = new FormData();
         form.append("query", query);
 
-        const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/rag/query`,
-        {
-            method: "POST",
-            body: form,
-        }
-        );
+        const res = await apiClient.post('/rag/query', form, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
         
-        if(!res.ok) throw new Error("Query failed");
-        setResult(await res.json());
+        setResult(res.data);
     } catch (e) {
         alert("Error querying database");
     } finally {

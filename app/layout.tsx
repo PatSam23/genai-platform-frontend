@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/navbar/Navbar";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,7 +30,7 @@ export default function RootLayout({
         <Navbar />
         {/* The main area takes 100vh minus 64px (navbar height) */}
         <main className="flex-1 h-[calc(100vh-64px)] w-full">
-          {children}
+          <ProtectedRoute>{children}</ProtectedRoute>
         </main>
       </body>
     </html>

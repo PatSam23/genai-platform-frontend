@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, ChangeEvent } from "react";
+import { apiClient } from "@/lib/apiClient";
 
 export default function RagUploader() {
   const [isUploading, setIsUploading] = useState(false);
@@ -32,26 +33,18 @@ export default function RagUploader() {
     formData.append("file", selectedFile);
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/rag/ingest/pdf`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
+      await apiClient.post('/rag/ingest/pdf', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
 
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(errorText || "Server error during ingestion");
-      }
-
-      await res.json(); 
       alert("Success: Document indexed successfully");
       setSelectedFile(null);
       (e.target as HTMLFormElement).reset(); 
     } catch (error: any) {
       console.error("Upload Error:", error);
-      alert("Upload Failed: " + error.message);
+      alert("Upload Failed: " + (error.response?.data?.detail || error.message));
     } finally {
       setIsUploading(false);
     }

@@ -5,14 +5,16 @@ import { Message } from "@/types/chat";
 import ChatInput from "./ChatInput";
 import MessageBubble from "./MessageBubble";
 import RagToggle from "./chat/RagToggle";
+import { useAuthStore } from "@/lib/store/authStore";
 
-const CHAT_STREAM_URL =
-  `${process.env.NEXT_PUBLIC_BACKEND_URL}/chat/stream`;
+const CHAT_STREAM_URL = 
+  `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/chat/stream`;
 
 const RAG_QUERY_URL =
-  `${process.env.NEXT_PUBLIC_BACKEND_URL}/rag/query`;
+  `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/rag/query`;
 
 export default function ChatWindow() {
+  const { accessToken } = useAuthStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [streaming, setStreaming] = useState(false);
   const [useRag, setUseRag] = useState(false);
@@ -73,7 +75,10 @@ export default function ChatWindow() {
   ) => {
     const res = await fetch(CHAT_STREAM_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${accessToken}`,
+      },
       body: JSON.stringify({ prompt, history }),
     });
 
@@ -108,6 +113,9 @@ export default function ChatWindow() {
 
     const res = await fetch(RAG_QUERY_URL, {
       method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+      },
       body: form,
     });
 
