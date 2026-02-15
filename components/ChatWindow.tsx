@@ -1,11 +1,20 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Message } from "@/types/chat";
 import ChatInput from "./ChatInput";
 import MessageBubble from "./MessageBubble";
 import RagToggle from "./chat/RagToggle";
 import { useAuthStore } from "@/lib/store/authStore";
+
+const handleUnauthorized = () => {
+  // Token expired/invalid — clear storage and redirect to login
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
+  if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+    window.location.href = '/login';
+  }
+};
 
 const CHAT_STREAM_URL = 
   `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/chat/stream`;
@@ -20,11 +29,24 @@ export default function ChatWindow() {
   const [useRag, setUseRag] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Auto-scroll to bottom
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Cancel the in-flight stream
+  const handleStop = useCallback(() => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+
+    // Mark the current assistant bubble as done (keep partial text)
+    setMessages((prev) =>
+      prev.map((m) => (m.streaming ? { ...m, streaming: false } : m))
+    );
+    setStreaming(false);
+  }, []);
 
   const handleSend = async (text: string) => {
     const userMessage: Message = {
@@ -59,8 +81,11 @@ export default function ChatWindow() {
         await streamChat(text, history, assistantId);
       }
     } catch (error) {
-      console.error("Chat Error:", error);
-      // Optional: Add error handling UI here if needed
+      if (error instanceof DOMException && error.name === "AbortError") {
+        // User clicked Stop — not a real error
+      } else {
+        console.error("Chat Error:", error);
+      }
       setStreaming(false);
     }
   };
@@ -73,6 +98,9 @@ export default function ChatWindow() {
     history: { role: string; content: string }[],
     assistantId: string
   ) => {
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     const res = await fetch(CHAT_STREAM_URL, {
       method: "POST",
       headers: { 
@@ -80,7 +108,13 @@ export default function ChatWindow() {
         "Authorization": `Bearer ${accessToken}`,
       },
       body: JSON.stringify({ prompt, history }),
+      signal: controller.signal,
     });
+
+    if (res.status === 401) {
+      handleUnauthorized();
+      return;
+    }
 
     if (!res.body) return;
 
@@ -119,6 +153,10 @@ export default function ChatWindow() {
       body: form,
     });
 
+    if (res.status === 401) {
+      handleUnauthorized();
+      return;
+    }
     if (!res.ok) throw new Error("RAG Query Failed");
 
     const data = await res.json();
@@ -195,7 +233,12 @@ export default function ChatWindow() {
       </div>
 
       {/* Input Area */}
-      <ChatInput onSend={handleSend} disabled={streaming} />
+      <ChatInput
+        onSend={handleSend}
+        disabled={streaming}
+        isStreaming={streaming}
+        onStop={handleStop}
+      />
     </div>
   );
 }

@@ -124,11 +124,21 @@ export const useAuthStore = create<AuthState>()(
         },
         
         checkAuth: async () => {
-           // Not fully implemented until /me endpoint exists
-           // For now rely on token presence
            const token = localStorage.getItem('access_token');
            if (token) {
-             set({ isAuthenticated: true, accessToken: token });
+             try {
+               // Decode the JWT payload and check expiration
+               const payload = JSON.parse(atob(token.split('.')[1]));
+               if (payload.exp && payload.exp * 1000 < Date.now()) {
+                 // Token expired — clear everything
+                 get().actions.logout();
+                 return;
+               }
+               set({ isAuthenticated: true, accessToken: token });
+             } catch {
+               // Malformed token — treat as unauthenticated
+               get().actions.logout();
+             }
            } else {
              set({ isAuthenticated: false, user: null });
            }

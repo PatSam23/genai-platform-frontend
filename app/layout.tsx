@@ -26,7 +26,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-zinc-50 flex flex-col h-screen overflow-hidden`}>
+      <body suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} antialiased bg-zinc-50 flex flex-col h-screen overflow-hidden`}>
         <Navbar />
         {/* The main area takes 100vh minus 64px (navbar height) */}
         <main className="flex-1 h-[calc(100vh-64px)] w-full">
