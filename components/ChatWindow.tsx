@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Message } from "@/types/chat";
+import { Message, ChatSessionDetail } from "@/types/chat";
 import ChatInput from "./ChatInput";
 import MessageBubble from "./MessageBubble";
 import RagToggle from "./chat/RagToggle";
 import { useAuthStore } from "@/lib/store/authStore";
 
 const handleUnauthorized = () => {
-  // Token expired/invalid — clear storage and redirect to login
   localStorage.removeItem('access_token');
   localStorage.removeItem('refresh_token');
   if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
@@ -16,17 +15,22 @@ const handleUnauthorized = () => {
   }
 };
 
-const CHAT_STREAM_URL = 
-  `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/chat/stream`;
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+const CHAT_STREAM_URL = `${API_URL}/chat/stream`;
+const RAG_QUERY_URL = `${API_URL}/rag/query`;
 
-const RAG_QUERY_URL =
-  `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/rag/query`;
+interface ChatWindowProps {
+  activeSessionId: string | null;
+  onSessionCreated: (sessionId: string) => void;
+}
 
-export default function ChatWindow() {
+export default function ChatWindow({ activeSessionId, onSessionCreated }: ChatWindowProps) {
   const { accessToken } = useAuthStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [streaming, setStreaming] = useState(false);
   const [useRag, setUseRag] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(activeSessionId);
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -36,12 +40,39 @@ export default function ChatWindow() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Load messages when activeSessionId changes from parent
+  useEffect(() => {
+    setSessionId(activeSessionId);
+    if (!activeSessionId) {
+      setMessages([]);
+      return;
+    }
+    // Fetch session detail
+    (async () => {
+      try {
+        const res = await fetch(`${API_URL}/chats/${activeSessionId}`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        if (!res.ok) return;
+        const data: ChatSessionDetail = await res.json();
+        setMessages(
+          data.messages.map((m) => ({
+            id: m.id,
+            role: m.role,
+            content: m.content,
+          }))
+        );
+      } catch (err) {
+        console.error("Failed to load session:", err);
+      }
+    })();
+  }, [activeSessionId, accessToken]);
+
   // Cancel the in-flight stream
   const handleStop = useCallback(() => {
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
-
-    // Mark the current assistant bubble as done (keep partial text)
     setMessages((prev) =>
       prev.map((m) => (m.streaming ? { ...m, streaming: false } : m))
     );
@@ -82,7 +113,7 @@ export default function ChatWindow() {
       }
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
-        // User clicked Stop — not a real error
+        // User clicked Stop
       } else {
         console.error("Chat Error:", error);
       }
@@ -103,19 +134,15 @@ export default function ChatWindow() {
 
     const res = await fetch(CHAT_STREAM_URL, {
       method: "POST",
-      headers: { 
+      headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
       },
-      body: JSON.stringify({ prompt, history }),
+      body: JSON.stringify({ prompt, history, session_id: sessionId }),
       signal: controller.signal,
     });
 
-    if (res.status === 401) {
-      handleUnauthorized();
-      return;
-    }
-
+    if (res.status === 401) { handleUnauthorized(); return; }
     if (!res.body) return;
 
     const reader = res.body.getReader();
@@ -147,16 +174,11 @@ export default function ChatWindow() {
 
     const res = await fetch(RAG_QUERY_URL, {
       method: "POST",
-      headers: {
-        "Authorization": `Bearer ${accessToken}`,
-      },
+      headers: { Authorization: `Bearer ${accessToken}` },
       body: form,
     });
 
-    if (res.status === 401) {
-      handleUnauthorized();
-      return;
-    }
+    if (res.status === 401) { handleUnauthorized(); return; }
     if (!res.ok) throw new Error("RAG Query Failed");
 
     const data = await res.json();
@@ -164,16 +186,10 @@ export default function ChatWindow() {
     setMessages((prev) =>
       prev.map((m) =>
         m.id === assistantId
-          ? {
-              ...m,
-              content: data.answer,
-              sources: data.sources,
-              streaming: false,
-            }
+          ? { ...m, content: data.answer, sources: data.sources, streaming: false }
           : m
       )
     );
-
     setStreaming(false);
   };
 
@@ -181,7 +197,7 @@ export default function ChatWindow() {
   // STREAM EVENT HANDLER
   // -------------------------
   const handleStreamEvent = (
-    event: { type: string; value?: any },
+    event: { type: string; value?: any; session_id?: string },
     assistantId: string
   ) => {
     if (event.type === "token") {
@@ -195,6 +211,14 @@ export default function ChatWindow() {
     }
 
     if (event.type === "done") {
+      // Capture the session_id returned by the backend (for new chats)
+      if (event.session_id && !sessionId) {
+        setSessionId(event.session_id);
+        onSessionCreated(event.session_id);
+      } else {
+        // Existing session — still refresh the sidebar to update timestamp/title
+        onSessionCreated(sessionId || "");
+      }
       setMessages((prev) =>
         prev.map((m) =>
           m.id === assistantId ? { ...m, streaming: false } : m
@@ -209,8 +233,10 @@ export default function ChatWindow() {
       {/* Header / Toolbar */}
       <div className="bg-white border-b border-zinc-200 px-8 py-4 flex items-center justify-between shadow-sm z-10">
         <div className="flex items-center gap-2">
-           <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
-           <span className="text-sm font-semibold text-zinc-600">Active Session</span>
+          <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
+          <span className="text-sm font-semibold text-zinc-600">
+            {sessionId ? "Chat Session" : "New Chat"}
+          </span>
         </div>
         <RagToggle enabled={useRag} onChange={setUseRag} />
       </div>
@@ -219,15 +245,13 @@ export default function ChatWindow() {
       <div className="flex-1 overflow-y-auto p-6 md:p-8 flex flex-col gap-6 scrollbar-thin scrollbar-thumb-zinc-300">
         {messages.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-zinc-400 opacity-60">
-             <svg className="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-             </svg>
-             <p className="text-lg font-medium">Start a conversation</p>
+            <svg className="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+            </svg>
+            <p className="text-lg font-medium">Start a conversation</p>
           </div>
         ) : (
-          messages.map((m) => (
-            <MessageBubble key={m.id} message={m} />
-          ))
+          messages.map((m) => <MessageBubble key={m.id} message={m} />)
         )}
         <div ref={bottomRef} />
       </div>
