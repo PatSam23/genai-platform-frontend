@@ -18,6 +18,7 @@ const handleUnauthorized = () => {
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 const CHAT_STREAM_URL = `${API_URL}/chat/stream`;
+const CHAT_STREAM_FILE_URL = `${API_URL}/chat/stream-with-file`;
 const RAG_QUERY_URL = `${API_URL}/rag/query`;
 
 interface ChatWindowProps {
@@ -61,6 +62,7 @@ export default function ChatWindow({ activeSessionId, onSessionCreated }: ChatWi
             id: m.id,
             role: m.role,
             content: m.content,
+            file_name: m.file_name,
           }))
         );
       } catch (err) {
@@ -79,11 +81,12 @@ export default function ChatWindow({ activeSessionId, onSessionCreated }: ChatWi
     setStreaming(false);
   }, []);
 
-  const handleSend = async (text: string) => {
+  const handleSend = async (text: string, file?: File) => {
     const userMessage: Message = {
       id: crypto.randomUUID(),
       role: "user",
-      content: text,
+      content: text || (file ? `Uploaded file: ${file.name}` : ""),
+      file_name: file?.name,
     };
 
     const assistantId = crypto.randomUUID();
@@ -108,6 +111,8 @@ export default function ChatWindow({ activeSessionId, onSessionCreated }: ChatWi
     try {
       if (useRag) {
         await runRagQuery(text, assistantId);
+      } else if (file) {
+        await streamChatWithFile(text, history, assistantId, file);
       } else {
         await streamChat(text, history, assistantId);
       }
@@ -139,6 +144,54 @@ export default function ChatWindow({ activeSessionId, onSessionCreated }: ChatWi
         Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify({ prompt, history, session_id: sessionId }),
+      signal: controller.signal,
+    });
+
+    if (res.status === 401) { handleUnauthorized(); return; }
+    if (!res.body) return;
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const events = buffer.split("\n\n");
+      buffer = events.pop() || "";
+
+      for (const event of events) {
+        if (!event.startsWith("data:")) continue;
+        const payload = JSON.parse(event.replace("data: ", ""));
+        handleStreamEvent(payload, assistantId);
+      }
+    }
+  };
+
+  // -------------------------
+  // STREAMING WITH FILE
+  // -------------------------
+  const streamChatWithFile = async (
+    prompt: string,
+    history: { role: string; content: string }[],
+    assistantId: string,
+    file: File
+  ) => {
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    const formData = new FormData();
+    formData.append("prompt", prompt || `Analyze this file: ${file.name}`);
+    formData.append("history", JSON.stringify(history));
+    if (sessionId) formData.append("session_id", sessionId);
+    formData.append("file", file);
+
+    const res = await fetch(CHAT_STREAM_FILE_URL, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: formData,
       signal: controller.signal,
     });
 

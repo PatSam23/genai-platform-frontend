@@ -6,6 +6,7 @@ export type Message = {
   content: string;
   sources?: any[];
   streaming?: boolean;
+  file_name?: string;
 };
 
 // ---------- Chat History (persisted) ----------
@@ -21,6 +22,7 @@ export interface ChatMessageOut {
   id: string;
   role: Role;
   content: string;
+  file_name?: string;
   created_at: string;
 }
 

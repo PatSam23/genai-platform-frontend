@@ -1,5 +1,6 @@
 import { Message } from "@/types/chat";
 import clsx from "clsx";
+import { Paperclip } from "lucide-react";
 
 export default function MessageBubble({ message }: { message: Message }) {
   const isUser = message.role === "user";
@@ -16,6 +17,20 @@ export default function MessageBubble({ message }: { message: Message }) {
       <div className={clsx("font-semibold text-lg mb-1", isUser ? "text-primary-foreground/70" : "text-muted-foreground")}>
         {isUser ? "You" : "AI Assistant"}
       </div>
+
+      {/* File attachment badge */}
+      {message.file_name && (
+        <div className={clsx(
+          "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium mb-2",
+          isUser
+            ? "bg-primary-foreground/10 text-primary-foreground/80"
+            : "bg-zinc-100 text-zinc-600"
+        )}>
+          <Paperclip className="w-3 h-3" />
+          <span className="truncate max-w-[180px]">{message.file_name}</span>
+        </div>
+      )}
+
       {message.content}
       {message.streaming && (
         <span className="ml-2 inline-block w-2 h-4 bg-current opacity-70 animate-pulse rounded-sm" />
