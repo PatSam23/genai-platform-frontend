@@ -77,12 +77,12 @@ export default function ChatSidebar({
   };
 
   return (
-    <div className="w-72 bg-zinc-900 text-white flex flex-col h-full">
+    <div className="w-72 bg-white border-r border-zinc-300 text-zinc-900 flex flex-col h-full">
       {/* New Chat Button */}
       <div className="p-4">
         <button
           onClick={onNewChat}
-          className="w-full flex items-center gap-2 px-4 py-3 rounded-xl border border-zinc-700 hover:bg-zinc-800 transition-colors text-sm font-medium"
+          className="w-full flex items-center gap-2 px-4 py-3 rounded-xl border border-zinc-300 hover:bg-zinc-100 transition-colors text-sm font-medium text-zinc-700"
         >
           <Plus className="w-4 h-4" />
           New Chat
@@ -90,13 +90,13 @@ export default function ChatSidebar({
       </div>
 
       {/* Session List */}
-      <div className="flex-1 overflow-y-auto px-3 pb-4 space-y-1 scrollbar-thin scrollbar-thumb-zinc-700">
+      <div className="flex-1 overflow-y-auto px-3 pb-4 space-y-1 scrollbar-thin scrollbar-thumb-zinc-300">
         {loading ? (
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-5 h-5 animate-spin text-zinc-500" />
+            <Loader2 className="w-5 h-5 animate-spin text-zinc-400" />
           </div>
         ) : sessions.length === 0 ? (
-          <p className="text-zinc-500 text-xs text-center py-8">
+          <p className="text-zinc-400 text-xs text-center py-8">
             No conversations yet
           </p>
         ) : (
@@ -107,20 +107,20 @@ export default function ChatSidebar({
               role="button"
               className={`group w-full text-left px-3 py-3 rounded-lg flex items-start gap-3 transition-colors cursor-pointer ${
                 activeSessionId === s.id
-                  ? "bg-zinc-700/70"
-                  : "hover:bg-zinc-800"
+                  ? "bg-zinc-100 border border-zinc-300 shadow-sm"
+                  : "hover:bg-zinc-50"
               }`}
             >
-              <MessageSquare className="w-4 h-4 mt-0.5 shrink-0 text-zinc-400" />
+              <MessageSquare className="w-4 h-4 mt-0.5 shrink-0 text-zinc-500" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{s.title}</p>
-                <p className="text-xs text-zinc-500 mt-0.5">
+                <p className="text-sm font-medium truncate text-zinc-800">{s.title}</p>
+                <p className="text-xs text-zinc-400 mt-0.5">
                   {formatDate(s.updated_at)}
                 </p>
               </div>
               <button
                 onClick={(e) => handleDelete(e, s.id)}
-                className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 transition-all shrink-0"
+                className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-red-500 transition-all shrink-0"
                 title="Delete"
               >
                 <Trash2 className="w-3.5 h-3.5" />
