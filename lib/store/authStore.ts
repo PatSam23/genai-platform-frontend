@@ -151,6 +151,5 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 );
-
 // Hook to access actions easily
 export const useAuthActions = () => useAuthStore((state) => state.actions);
