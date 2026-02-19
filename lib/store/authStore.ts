@@ -36,13 +36,13 @@ export const useAuthStore = create<AuthState>()(
           try {
             // Clear any stale auth error from previous attempts
             set({ error: null });
-            // Updated endpoint to use FormData format for OAuth2PasswordRequestForm compliance
-            const formData = new FormData();
-            formData.append('username', credentials.username);
-            formData.append('password', credentials.password);
+            // Use URLSearchParams for OAuth2PasswordRequestForm (x-www-form-urlencoded)
+            const params = new URLSearchParams();
+            params.append('username', credentials.username);
+            params.append('password', credentials.password);
             
-            const response = await apiClient.post('/auth/login', formData, {
-              headers: { 'Content-Type': 'multipart/form-data' }
+            const response = await apiClient.post('/auth/login', params, {
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
             });
 
             const { access_token, refresh_token } = response.data;
