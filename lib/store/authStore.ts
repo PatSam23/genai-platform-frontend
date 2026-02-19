@@ -34,6 +34,8 @@ export const useAuthStore = create<AuthState>()(
         login: async (credentials) => {
           set({ isLoading: true, error: null });
           try {
+            // Clear any stale auth error from previous attempts
+            set({ error: null });
             // Updated endpoint to use FormData format for OAuth2PasswordRequestForm compliance
             const formData = new FormData();
             formData.append('username', credentials.username);

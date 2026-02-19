@@ -98,7 +98,12 @@ export default function ChatInput({
           placeholder={file ? "Add a message about this file..." : "Type your message..."}
           value={text}
           onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && !disabled && handleSend()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey && !disabled) {
+              e.preventDefault();
+              handleSend();
+            }
+          }}
           disabled={disabled}
         />
 
