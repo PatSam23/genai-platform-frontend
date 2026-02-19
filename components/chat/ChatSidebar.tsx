@@ -20,7 +20,7 @@ export default function ChatSidebar({
   onNewChat,
   refreshKey,
 }: ChatSidebarProps) {
-  const { accessToken } = useAuthStore();
+  const accessToken = useAuthStore((s) => s.accessToken);
   const [sessions, setSessions] = useState<ChatSessionSummary[]>([]);
   const [loading, setLoading] = useState(true);
 

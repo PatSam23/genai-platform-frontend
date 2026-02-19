@@ -27,7 +27,7 @@ interface ChatWindowProps {
 }
 
 export default function ChatWindow({ activeSessionId, onSessionCreated }: ChatWindowProps) {
-  const { accessToken } = useAuthStore();
+  const accessToken = useAuthStore((s) => s.accessToken);
   const [messages, setMessages] = useState<Message[]>([]);
   const [streaming, setStreaming] = useState(false);
   const [useRag, setUseRag] = useState(false);
@@ -163,9 +163,15 @@ export default function ChatWindow({ activeSessionId, onSessionCreated }: ChatWi
       buffer = events.pop() || "";
 
       for (const event of events) {
-        if (!event.startsWith("data:")) continue;
-        const payload = JSON.parse(event.replace("data: ", ""));
-        handleStreamEvent(payload, assistantId);
+        const trimmed = event.trim();
+        if (!trimmed.startsWith("data:")) continue;
+        const jsonStr = trimmed.slice(trimmed.indexOf(":") + 1).trim();
+        try {
+          const payload = JSON.parse(jsonStr);
+          handleStreamEvent(payload, assistantId);
+        } catch (e) {
+          console.warn("Failed to parse SSE event:", jsonStr);
+        }
       }
     }
   };
@@ -211,9 +217,15 @@ export default function ChatWindow({ activeSessionId, onSessionCreated }: ChatWi
       buffer = events.pop() || "";
 
       for (const event of events) {
-        if (!event.startsWith("data:")) continue;
-        const payload = JSON.parse(event.replace("data: ", ""));
-        handleStreamEvent(payload, assistantId);
+        const trimmed = event.trim();
+        if (!trimmed.startsWith("data:")) continue;
+        const jsonStr = trimmed.slice(trimmed.indexOf(":") + 1).trim();
+        try {
+          const payload = JSON.parse(jsonStr);
+          handleStreamEvent(payload, assistantId);
+        } catch (e) {
+          console.warn("Failed to parse SSE event:", jsonStr);
+        }
       }
     }
   };
@@ -224,6 +236,7 @@ export default function ChatWindow({ activeSessionId, onSessionCreated }: ChatWi
   const runRagQuery = async (query: string, assistantId: string) => {
     const form = new FormData();
     form.append("query", query);
+    form.append("top_k", "5");
 
     const res = await fetch(RAG_QUERY_URL, {
       method: "POST",

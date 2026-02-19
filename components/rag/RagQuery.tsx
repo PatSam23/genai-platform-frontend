@@ -15,6 +15,7 @@ export default function RagQuery() {
     try {
         const form = new FormData();
         form.append("query", query);
+        form.append("top_k", "5");
 
         const res = await apiClient.post('/rag/query', form, {
           headers: {
