@@ -101,8 +101,9 @@ export default function ChatWindow({ activeSessionId, onSessionCreated }: ChatWi
     setMessages(updatedMessages);
     setStreaming(true);
 
-    const history = updatedMessages
-      .filter((m) => m.role !== "assistant" || m.content.length > 0)
+    // Send only previous completed messages as history (exclude the new empty assistant placeholder)
+    const history = messages
+      .filter((m) => m.content.length > 0)
       .map((m) => ({
         role: m.role,
         content: m.content,
