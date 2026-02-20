@@ -113,6 +113,8 @@ export const useAuthStore = create<AuthState>()(
           });
           localStorage.removeItem('access_token');
           localStorage.removeItem('refresh_token');
+          // Clear persisted zustand storage too
+          localStorage.removeItem('auth-storage');
           
           if (typeof window !== 'undefined') {
              window.location.href = '/login';

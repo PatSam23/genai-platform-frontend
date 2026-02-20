@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuthActions, useAuthStore } from '@/lib/store/authStore';
@@ -10,7 +10,6 @@ import { Loader2 } from 'lucide-react';
 import { AlertCircle } from 'lucide-react';
 
 export default function LoginForm() {
-  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   
   // Use store actions and state
@@ -27,14 +26,11 @@ export default function LoginForm() {
   });
 
   const onSubmit: SubmitHandler<LoginFormData> = async (data) => {
-    setError(null);
     try {
-      await login({ username: data.email, password: data.password }); // Convert email to username as expected by LoginRequest which expects OAuth2 params
-      router.push('/'); // Redirect after successful login
+      await login({ username: data.email, password: data.password });
+      router.push('/');
     } catch (err: any) {
-        // Error handling is managed by auth store (it sets state.error),
-        // but we can also handle immediate specific errors here if needed.
-        // The store handles general API errors.
+        // Error is set in the auth store — displayed via authError
         console.error("Login failed", err);
     }
   };
@@ -44,10 +40,10 @@ export default function LoginForm() {
       <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">Login</h2>
       
       {/* Global Error Display (Account Lockout, Invalid Creds) */}
-      {(error || authError) && (
+      {authError && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-md text-sm flex items-start gap-2">
             <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-            <span>{error || authError}</span>
+            <span>{authError}</span>
         </div>
       )}
 

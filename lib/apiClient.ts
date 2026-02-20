@@ -1,8 +1,4 @@
 import axios from 'axios';
-import Cookies from 'js-cookie';
-
-// Using localStorage for token persistence for simplicity in MVP
-// In production, consider HttpOnly cookies for better security
 
 // API Base URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
