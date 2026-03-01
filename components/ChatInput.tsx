@@ -6,7 +6,7 @@ import { Paperclip, X } from "lucide-react";
 const ALLOWED_EXTENSIONS = [
   ".pdf", ".txt", ".md", ".csv", ".json",
   ".py", ".js", ".ts", ".html", ".css", ".log",
-];
+]; 
 
 export default function ChatInput({
   onSend,
