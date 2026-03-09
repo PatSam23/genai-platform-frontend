@@ -17,6 +17,7 @@ interface AuthState {
     logout: () => void;
     setTokens: (accessToken: string, refreshToken: string) => void;
     checkAuth: () => Promise<void>;
+    clearError: () => void;
   };
 }
 
@@ -146,7 +147,9 @@ export const useAuthStore = create<AuthState>()(
            } else {
              set({ isAuthenticated: false, user: null });
            }
-        }
+        },
+
+        clearError: () => set({ error: null }),
       },
     }),
     {
