@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuthActions, useAuthStore } from '@/lib/store/authStore';
@@ -14,9 +14,15 @@ export default function RegisterForm() {
   const router = useRouter();
 
   // Use store actions and state
-  const { register: registerAuth } = useAuthActions();
+  const { register: registerAuth, clearError } = useAuthActions();
   const isLoading = useAuthStore((state) => state.isLoading);
   const authError = useAuthStore((state) => state.error);
+
+  // Clear stale errors from previous sessions (e.g. leftover from login page)
+  useEffect(() => {
+    clearError();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const {
     register,

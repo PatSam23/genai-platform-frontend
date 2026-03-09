@@ -119,9 +119,13 @@ export default function ChatWindow({ activeSessionId, onSessionCreated }: ChatWi
       }
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
-        // User clicked Stop
+        // User clicked Stop — handleStop already clears streaming flag on messages
       } else {
         console.error("Chat Error:", error);
+        // Clear the streaming cursor on the failed assistant message
+        setMessages((prev) =>
+          prev.map((m) => (m.streaming ? { ...m, streaming: false } : m))
+        );
       }
       setStreaming(false);
     }
@@ -250,10 +254,20 @@ export default function ChatWindow({ activeSessionId, onSessionCreated }: ChatWi
 
     const data = await res.json();
 
+    // Normalize sources: backend /rag/query returns tuples [[text, score, meta], ...]
+    // while MessageBubble expects objects {text, score, metadata}.
+    const sources = Array.isArray(data.sources)
+      ? data.sources.map((s: any) =>
+          Array.isArray(s)
+            ? { text: s[0], score: s[1], metadata: s[2] }
+            : s
+        )
+      : [];
+
     setMessages((prev) =>
       prev.map((m) =>
         m.id === assistantId
-          ? { ...m, content: data.answer, sources: data.sources, streaming: false }
+          ? { ...m, content: data.answer, sources, streaming: false }
           : m
       )
     );

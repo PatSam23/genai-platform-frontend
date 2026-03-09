@@ -33,11 +33,9 @@ export default function RagUploader() {
     formData.append("file", selectedFile);
 
     try {
-      await apiClient.post('/rag/ingest/pdf', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      // Do NOT manually set Content-Type for FormData — axios auto-sets it
+      // with the correct multipart boundary.
+      await apiClient.post('/rag/ingest/pdf', formData);
 
       alert("Success: Document indexed successfully");
       setSelectedFile(null);

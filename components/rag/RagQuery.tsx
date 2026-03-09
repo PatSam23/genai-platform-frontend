@@ -17,11 +17,9 @@ export default function RagQuery() {
         form.append("query", query);
         form.append("top_k", "5");
 
-        const res = await apiClient.post('/rag/query', form, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        });
+        // Do NOT manually set Content-Type for FormData — axios auto-sets it
+        // with the correct multipart boundary.
+        const res = await apiClient.post('/rag/query', form);
         
         setResult(res.data);
     } catch (e) {
